@@ -78,6 +78,7 @@ player.CharacterAdded:Connect(setupCharacter)
 --------------------------------------------------------------------
 -- The picture shows:
 --   Title: "Fe Headless Head"
+--   Text : "By V"
 --   Icon : the red Roblox character thumbnail
 --   A green progress bar (handled automatically by Roblox)
 
@@ -85,6 +86,7 @@ local function sendCustomNotification()
     pcall(function()
         StarterGui:SetCore("SendNotification", {
             Title    = "Fe Headless Head",
+            Text     = "By V",
             Icon     = "rbxthumb://type=Avatar&id=" .. player.UserId .. "&w=150&h=150", -- red avatar thumbnail
             Duration = 5
         })

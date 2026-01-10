@@ -1,0 +1,901 @@
+-- donate me ples😔
+-- sorry because some of the stuff looks like AI because I asked ai to remove the keysystem stuff and it goes wild
+local cGui = game:GetService("CoreGui")
+local tSrv = game:GetService("TweenService")
+local hSrv = game:GetService("HttpService")
+
+local fun = {}
+
+fun.loadFlagsScript = function()
+    local Fluent = loadstring(game:HttpGet("https://raw.githubusercontent.com/discoart/FluentPlus/refs/heads/main/Beta.lua"))()
+    local SavMan = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
+    local IntMan = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
+
+    local apiUrl = "https://shyt-fflags.vercel.app/api"
+    local cfgDir = "&R4 FLAG"
+    local cfgExt = ".json"
+    local autoFile = "autoload.json"
+
+    local isExec = pcall(function()
+        return readfile and writefile and isfile
+    end)
+
+    if not isExec then
+        Fluent:Notify({
+            Title = "Error",
+            Content = "Executor not supported",
+            Duration = 5
+        })
+        return
+    end
+
+    local function mkgDir()
+        pcall(function()
+            if not isfile(cfgDir .. "/test.txt") then
+                writefile(cfgDir .. "/test.txt", "")
+                delfile(cfgDir .. "/test.txt")
+            end
+        end)
+        return cfgDir
+    end
+
+    local function clnFlag(flgNam)
+        return flgNam
+            :gsub("^DFFlag", "")
+            :gsub("^FFlag", "")
+            :gsub("^DFInt", "")
+            :gsub("^FInt", "")
+            :gsub("^DFString", "")
+            :gsub("^FString", "")
+    end
+
+    local function setFlg(flgNam, flgVal)
+        local clnNam = clnFlag(flgNam)
+        pcall(function()
+            setfflag(tostring(clnNam), tostring(flgVal))
+        end)
+        return true
+    end
+
+    local function getCfgs()
+        local dir = mkgDir()
+        local cfgs = {}
+        local suc, fil = pcall(listfiles, dir)
+        if not suc then return {} end
+        
+        for _, fil in ipairs(fil) do
+            local nam = fil:match("[^\\/]+$")
+            if nam:match(cfgExt .. "$") and nam ~= autoFile then
+                table.insert(cfgs, nam)
+            end
+        end
+        
+        table.sort(cfgs)
+        return cfgs
+    end
+
+    local function savCfg(cfgNam, cfgDat)
+        if not cfgNam or cfgNam == "" then
+            return false, "Enter name"
+        end
+        
+        if not cfgNam:match(cfgExt .. "$") then
+            cfgNam = cfgNam .. cfgExt
+        end
+        
+        if cfgNam == autoFile then
+            return false, "nice"
+        end
+        
+        local dir = mkgDir()
+        local pth = dir .. "/" .. cfgNam
+        
+        if isfile(pth) then
+            return false, "Name exists"
+        end
+        
+        local suc, err = pcall(function()
+            writefile(pth, hSrv:JSONEncode(cfgDat))
+        end)
+        
+        if suc then
+            return true, "Saved"
+        else
+            return false, "Failed"
+        end
+    end
+
+    local function lodCfg(cfgNam)
+        if not cfgNam:match(cfgExt .. "$") then
+            cfgNam = cfgNam .. cfgExt
+        end
+        
+        local dir = mkgDir()
+        local pth = dir .. "/" .. cfgNam
+        
+        if not isfile(pth) then
+            return nil, "Not found"
+        end
+        
+        local suc, cnt = pcall(readfile, pth)
+        if not suc then
+            return nil, "Failed read"
+        end
+        
+        local suc2, dec = pcall(hSrv.JSONDecode, hSrv, cnt)
+        if not suc2 then
+            return nil, "Failed parse"
+        end
+        
+        return dec, "Loaded"
+    end
+
+    local function delCfg(cfgNam)
+        if not cfgNam:match(cfgExt .. "$") then
+            cfgNam = cfgNam .. cfgExt
+        end
+        
+        if cfgNam == autoFile then
+            return false, "Cannot delete"
+        end
+        
+        local dir = mkgDir()
+        local pth = dir .. "/" .. cfgNam
+        
+        if not isfile(pth) then
+            return false, "Not found"
+        end
+        
+        local suc, err = pcall(delfile, pth)
+        
+        if suc then
+            return true, "Deleted"
+        else
+            return false, "Failed"
+        end
+    end
+
+    local function lodFlg(jsnDat)
+        local suc, dec = pcall(hSrv.JSONDecode, hSrv, jsnDat)
+        
+        if not suc then
+            return false, "Invalid FFlags", {applied = 0}
+        end
+        
+        if type(dec) ~= "table" then
+            return false, "FFlags must be in uhh idk", {applied = 0}
+        end
+        
+        local app = 0
+        
+        for flgNam, flgVal in pairs(dec) do
+            local suc = setFlg(flgNam, flgVal)
+            if suc then
+                app = app + 1
+            end
+        end
+        
+        return true, "Loaded " .. app .. " flags", {applied = app}
+    end
+
+    local function savAuto(cfgNam)
+        local dir = mkgDir()
+        local pth = dir .. "/" .. autoFile
+        
+        local dat = {
+            autoLoadConfig = cfgNam
+        }
+        
+        local suc, err = pcall(function()
+            writefile(pth, hSrv:JSONEncode(dat))
+        end)
+        
+        if suc then
+            return true, "Auto load saved"
+        else
+            return false, "Failed"
+        end
+    end
+
+    local function lodAuto()
+        local dir = mkgDir()
+        local pth = dir .. "/" .. autoFile
+        
+        if not isfile(pth) then
+            return nil, "No auto load"
+        end
+        
+        local suc, cnt = pcall(readfile, pth)
+        if not suc then
+            return nil, "Failed read"
+        end
+        
+        local suc2, dec = pcall(hSrv.JSONDecode, hSrv, cnt)
+        if not suc2 then
+            return nil, "Failed parse"
+        end
+        
+        return dec.autoLoadConfig, "Loaded"
+    end
+
+    local function delAuto()
+        local dir = mkgDir()
+        local pth = dir .. "/" .. autoFile
+        
+        if not isfile(pth) then
+            return true, "No auto load"
+        end
+        
+        local suc, err = pcall(delfile, pth)
+        
+        if suc then
+            return true, "Deleted"
+        else
+            return false, "Failed"
+        end
+    end
+
+    local function httpGet(url)
+        local req = syn and syn.request or http_request or request or http and http.request
+        if req then
+            local suc, res = pcall(function()
+                return req({
+                    Url = url,
+                    Method = "GET"
+                })
+            end)
+            if suc and res and res.Success and res.Body then
+                return res.Body
+            end
+        end
+        
+        local suc2, res2 = pcall(game.HttpGetAsync, game, url, true)
+        if suc2 then
+            return res2
+        end
+        
+        return nil
+    end
+
+    local function mkPaste(jsnTxt, nam)
+        local devKey = "use your own Pastebin api key nigger"
+        local tit = nam or "&R4 ONTOP"
+        
+        local dat = "api_option=paste&api_dev_key=" .. devKey .. "&api_paste_code=" .. hSrv:UrlEncode(jsnTxt) .. "&api_paste_name=" .. hSrv:UrlEncode(tit) .. "&api_paste_expire_date=N&api_paste_format=text&api_paste_private=0&api_user_key="
+        
+        local req = syn and syn.request or http_request or request or http and http.request
+        if not req then
+            return nil, nil, "HTTP request function not available"
+        end
+        
+        local suc, res = pcall(function()
+            return req({
+                Url = "https://pastebin.com/api/api_post.php",
+                Method = "POST",
+                Headers = {
+                    ["Content-Type"] = "application/x-www-form-urlencoded"
+                },
+                Body = dat
+            })
+        end)
+        
+        if not suc then
+            return nil, nil, "Failed to send request"
+        end
+        
+        if res.Success then
+            local url = res.Body
+            if url:match("^https?://") then
+                return url, url, "URL created"
+            else
+                local id = url:match("[^/]+$")
+                local raw = "https://pastebin.com/raw/" .. id
+                return id, raw, "URL created"
+            end
+        else
+            return nil, nil, "Pastebin API error"
+        end
+    end
+
+    local Win = Fluent:CreateWindow({
+        Title = "&R4 Flags",
+        SubTitle = "FFlags library",
+        Search = true,
+        Icon = "flag",
+        TabWidth = 160,
+        Size = UDim2.fromOffset(600, 550),
+        Acrylic = false,
+        Theme = "Amethyst",
+        MinimizeKey = Enum.KeyCode.RightShift,
+        UserInfo = true,
+        UserInfoTop = false,
+        UserInfoTitle = "&R4 Hideout",
+        UserInfoSubtitle = "working",
+        UserInfoSubtitleColor = Color3.fromRGB(255, 255, 255)
+    })
+
+    local Tab = {
+        Main = Win:AddTab({ Title = "Main", Icon = "home" }),
+        Config = Win:AddTab({ Title = "Configs", Icon = "save" }),
+        Lib = Win:AddTab({ Title = "Library", Icon = "book" }),
+        Set = Win:AddTab({ Title = "Settings", Icon = "settings" })
+    }
+
+    local Min = Fluent:CreateMinimizer({
+      Icon = "home",
+      Size = UDim2.fromOffset(44, 44),
+      Position = UDim2.new(0, 320, 0, 24),
+      Acrylic = true,
+      Corner = 10,
+      Transparency = 1,
+      Draggable = true,
+      Visible = true
+    })
+
+    local Opt = Fluent.Options
+
+    local savCfg = getCfgs()
+    local flgEx = [[{
+        "FFlagDebugRenderingSetDeterministic": "True",
+        "DFIntTaskSchedulerTargetFps": "9999"
+    }]]
+
+    Tab.Main:AddSection("URL")
+
+    local UrlIn = Tab.Main:AddInput("UrlIn", {
+        Title = "URL",
+        Default = "",
+        Placeholder = "Enter URL",
+        Numeric = false,
+        Finished = false,
+        Callback = function(Val) end
+    })
+
+    Tab.Main:AddButton({
+        Title = "Load URL",
+        Description = "Load FFlags from URL",
+        Callback = function()
+            local url = Opt.UrlIn.Value
+            if url == "" then
+                Fluent:Notify({
+                    Title = "Error",
+                    Content = "Enter URL",
+                    Duration = 2
+                })
+                return
+            end
+            
+            local cnt = httpGet(url)
+            if cnt then
+                local lod, msg, res = lodFlg(cnt)
+                if lod then
+                    Fluent:Notify({
+                        Title = "Done",
+                        Content = msg,
+                        Duration = 3
+                    })
+                else
+                    Fluent:Notify({
+                        Title = "Error",
+                        Content = msg,
+                        Duration = 3
+                    })
+                end
+            else
+                Fluent:Notify({
+                    Title = "Error",
+                    Content = "Failed to fetch URL",
+                    Duration = 3
+                })
+            end
+        end
+    })
+
+    Tab.Main:AddSection("FFlags")
+
+    local FlgIn = Tab.Main:AddInput("FlgIn", {
+        Title = "FFlags Data",
+        Default = flgEx,
+        Placeholder = "Paste FFlags",
+        Numeric = false,
+        Finished = false,
+        Callback = function(Val) end
+    })
+
+    Tab.Main:AddButton({
+        Title = "Load FFlags",
+        Description = "Apply FFlags from text",
+        Callback = function()
+            local flg = Opt.FlgIn.Value
+            if flg == "" then
+                Fluent:Notify({
+                    Title = "Error",
+                    Content = "Enter FFlags",
+                    Duration = 2
+                })
+                return
+            end
+            
+            local lod, msg, res = lodFlg(flg)
+            if lod then
+                Fluent:Notify({
+                    Title = "Done",
+                    Content = msg,
+                    Duration = 3
+                })
+            else
+                Fluent:Notify({
+                    Title = "Error",
+                    Content = msg,
+                    Duration = 3
+                })
+            end
+        end
+    })
+
+    Tab.Main:AddButton({
+        Title = "Turn into URL",
+        Description = "Convert FFlags to Pastebin URL",
+        Callback = function()
+            local flg = Opt.FlgIn.Value
+            if flg == "" then
+                Fluent:Notify({
+                    Title = "Error",
+                    Content = "Enter FFlags",
+                    Duration = 2
+                })
+                return
+            end
+            
+            local id, raw, msg = mkPaste(flg)
+            if id and raw then
+                if setclipboard then
+                    setclipboard(raw)
+                    Fluent:Notify({
+                        Title = "Success",
+                        Content = "URL copied to clipboard\n" .. raw,
+                        Duration = 4
+                    })
+                else
+                    Fluent:Notify({
+                        Title = "Success",
+                        Content = "URL created: " .. raw,
+                        Duration = 4
+                    })
+                end
+            else
+                Fluent:Notify({
+                    Title = "Error",
+                    Content = msg,
+                    Duration = 3
+                })
+            end
+        end
+    })
+
+    Tab.Main:AddSection("Auto Load")
+
+    local AutDrp = Tab.Main:AddDropdown("AutDrp", {
+        Title = "Select Auto Load Config",
+        Values = savCfg,
+        Multi = false,
+        Search = true,
+        Default = "",
+    })
+
+    Tab.Main:AddButton({
+        Title = "Set Auto Load",
+        Description = "Set config to auto load",
+        Callback = function()
+            local sel = Opt.AutDrp.Value
+            if sel == "" then
+                Fluent:Notify({
+                    Title = "Error",
+                    Content = "Select config",
+                    Duration = 2
+                })
+                return
+            end
+            
+            local suc, msg = savAuto(sel)
+            if suc then
+                Fluent:Notify({
+                    Title = "Set",
+                    Content = sel .. " will auto load",
+                    Duration = 3
+                })
+            else
+                Fluent:Notify({
+                    Title = "Error",
+                    Content = msg,
+                    Duration = 3
+                })
+            end
+        end
+    })
+
+    Tab.Main:AddButton({
+        Title = "Remove Auto Load",
+        Description = "Remove auto load config",
+        Callback = function()
+            local suc, msg = delAuto()
+            if suc then
+                Fluent:Notify({
+                    Title = "Removed",
+                    Content = msg,
+                    Duration = 3
+                })
+            else
+                Fluent:Notify({
+                    Title = "Error",
+                    Content = msg,
+                    Duration = 3
+                })
+            end
+        end
+    })
+
+    Tab.Config:AddSection("Save Config")
+
+    local CfgIn = Tab.Config:AddInput("CfgIn", {
+        Title = "Config Name",
+        Default = "",
+        Placeholder = "Enter name",
+        Numeric = false,
+        Finished = false,
+        Callback = function(Val) end
+    })
+
+    Tab.Config:AddButton({
+        Title = "Save Config",
+        Description = "Save current FFlags as config",
+        Callback = function()
+            local nam = Opt.CfgIn.Value
+            if nam == "" then
+                Fluent:Notify({
+                    Title = "Error",
+                    Content = "Enter name",
+                    Duration = 2
+                })
+                return
+            end
+            
+            local flg = Opt.FlgIn.Value
+            if flg == "" then
+                Fluent:Notify({
+                    Title = "Error",
+                    Content = "Enter FFlags",
+                    Duration = 2
+                })
+                return
+            end
+            
+            local suc, dec = pcall(hSrv.JSONDecode, hSrv, flg)
+            if not suc then
+                Fluent:Notify({
+                    Title = "Error",
+                    Content = "Invalid FFlags",
+                    Duration = 2
+                })
+                return
+            end
+            
+            local sav, msg = savCfg(nam, dec)
+            
+            Fluent:Notify({
+                Title = sav and "Saved" or "Error",
+                Content = msg,
+                Duration = 3
+            })
+            
+            if sav then
+                Opt.CfgIn:SetValue("")
+                savCfg = getCfgs()
+                Opt.CfgDrp:SetValues(savCfg)
+                Opt.AutDrp:SetValues(savCfg)
+            end
+        end
+    })
+
+    Tab.Config:AddButton({
+        Title = "Save from URL",
+        Description = "Save FFlags from URL as config",
+        Callback = function()
+            local url = Opt.UrlIn.Value
+            if url == "" then
+                Fluent:Notify({
+                    Title = "Error",
+                    Content = "Enter URL",
+                    Duration = 2
+                })
+                return
+            end
+            
+            local nam = Opt.CfgIn.Value
+            if nam == "" then
+                Fluent:Notify({
+                    Title = "Error",
+                    Content = "Enter name",
+                    Duration = 2
+                })
+                return
+            end
+            
+            local cnt = httpGet(url)
+            if not cnt then
+                Fluent:Notify({
+                    Title = "Error",
+                    Content = "Failed to fetch URL",
+                    Duration = 3
+                })
+                return
+            end
+            
+            local suc, dec = pcall(hSrv.JSONDecode, hSrv, cnt)
+            if not suc then
+                Fluent:Notify({
+                    Title = "Error",
+                    Content = "Invalid FFlags",
+                    Duration = 3
+                })
+                return
+            end
+            
+            local sav, msg = savCfg(nam, dec)
+            
+            Fluent:Notify({
+                Title = sav and "Saved" or "Error",
+                Content = msg,
+                Duration = 3
+            })
+            
+            if sav then
+                Opt.CfgIn:SetValue("")
+                savCfg = getCfgs()
+                Opt.CfgDrp:SetValues(savCfg)
+                Opt.AutDrp:SetValues(savCfg)
+            end
+        end
+    })
+
+    Tab.Config:AddSection("Configs")
+
+    local CfgDrp = Tab.Config:AddDropdown("CfgDrp", {
+        Title = "Saved Configs",
+        Values = savCfg,
+        Multi = false,
+        Search = true,
+        Default = savCfg[1] or "",
+    })
+
+    Tab.Config:AddButton({
+        Title = "Load Config",
+        Description = "Load selected config",
+        Callback = function()
+            local sel = Opt.CfgDrp.Value
+            if sel == "" then
+                Fluent:Notify({
+                    Title = "Error",
+                    Content = "Select config",
+                    Duration = 2
+                })
+                return
+            end
+            
+            local cfg, msg = lodCfg(sel)
+            if cfg then
+                Opt.FlgIn:SetValue(hSrv:JSONEncode(cfg))
+                local lod, lodMsg, res = lodFlg(hSrv:JSONEncode(cfg))
+                if lod then
+                    Fluent:Notify({
+                        Title = "Loaded",
+                        Content = lodMsg,
+                        Duration = 3
+                    })
+                else
+                    Fluent:Notify({
+                        Title = "Error",
+                        Content = lodMsg,
+                        Duration = 3
+                    })
+                end
+            else
+                Fluent:Notify({
+                    Title = "Error",
+                    Content = msg,
+                    Duration = 3
+                })
+            end
+        end
+    })
+
+    Tab.Config:AddButton({
+        Title = "Delete Config",
+        Description = "Delete selected config",
+        Callback = function()
+            local sel = Opt.CfgDrp.Value
+            if sel == "" then
+                Fluent:Notify({
+                    Title = "Error",
+                    Content = "Select config",
+                    Duration = 2
+                })
+                return
+            end
+            
+            local suc, msg = delCfg(sel)
+            
+            Fluent:Notify({
+                Title = suc and "Deleted" or "Error",
+                Content = msg,
+                Duration = 3
+            })
+            
+            if suc then
+                savCfg = getCfgs()
+                Opt.CfgDrp:SetValues(savCfg)
+                Opt.AutDrp:SetValues(savCfg)
+            end
+        end
+    })
+
+    Tab.Config:AddButton({
+        Title = "Refresh List",
+        Description = "Refresh configs list",
+        Callback = function()
+            savCfg = getCfgs()
+            Opt.CfgDrp:SetValues(savCfg)
+            Opt.AutDrp:SetValues(savCfg)
+            Fluent:Notify({
+                Title = "Refreshed",
+                Content = "List updated",
+                Duration = 2
+            })
+        end
+    })
+
+    Tab.Lib:AddSection("Public Library")
+
+    local libDat = {}
+    local libBtn = {}
+
+    local function lodLib()
+        local cnt = httpGet(apiUrl)
+        if not cnt then
+            Fluent:Notify({
+                Title = "Error",
+                Content = "Failed to fetch library",
+                Duration = 3
+            })
+            return
+        end
+        
+        local suc, dat = pcall(hSrv.JSONDecode, hSrv, cnt)
+        if suc and dat and type(dat) == "table" then
+            libDat = dat
+            
+            for _, btn in ipairs(libBtn) do
+                btn:Destroy()
+            end
+            libBtn = {}
+            
+            local cnt = 0
+            for nam, ids in pairs(libDat) do
+                cnt = cnt + 1
+                if type(ids) == "table" then
+                    local btn = Tab.Lib:AddButton({
+                        Title = nam,
+                        Description = "Pastebin ID: " .. table.concat(ids, ", "),
+                        Callback = function()
+                            if #ids > 0 then
+                                local raw = "https://pastebin.com/raw/" .. ids[1]
+                                local cnt = httpGet(raw)
+                                if cnt then
+                                    local lod, msg, res = lodFlg(cnt)
+                                    if lod then
+                                        Fluent:Notify({
+                                            Title = "Loaded",
+                                            Content = msg,
+                                            Duration = 3
+                                        })
+                                    else
+                                        Fluent:Notify({
+                                            Title = "Error",
+                                            Content = msg,
+                                            Duration = 3
+                                        })
+                                    end
+                                else
+                                    Fluent:Notify({
+                                        Title = "Error",
+                                        Content = "Failed to fetch from Pastebin",
+                                        Duration = 3
+                                    })
+                                end
+                            end
+                        end
+                    })
+                    table.insert(libBtn, btn)
+                end
+            end
+            
+            Fluent:Notify({
+                Title = "Library",
+                Content = "Loaded " .. cnt .. " items",
+                Duration = 3
+            })
+        else
+            Fluent:Notify({
+                Title = "Error",
+                Content = "Failed to parse library data",
+                Duration = 3
+            })
+        end
+    end
+
+    Tab.Lib:AddButton({
+        Title = "Load Library",
+        Description = "Fetch public FFlags library",
+        Callback = function()
+            lodLib()
+        end
+    })
+
+    Tab.Lib:AddButton({
+        Title = "Refresh Library",
+        Description = "Refreshing boii",
+        Callback = function()
+            lodLib()
+        end
+    })
+
+    SavMan:SetLibrary(Fluent)
+    IntMan:SetLibrary(Fluent)
+    SavMan:IgnoreThemeSettings()
+    SavMan:SetIgnoreIndexes({})
+    IntMan:SetFolder("&R4 Flags")
+    SavMan:SetFolder("&R4 Flags/configs")
+    IntMan:BuildInterfaceSection(Tab.Set)
+    SavMan:BuildConfigSection(Tab.Set)
+
+    Win:SelectTab(1)
+
+    mkgDir()
+
+    local autNam, autMsg = lodAuto()
+    if autNam then
+        local cfg, msg = lodCfg(autNam)
+        if cfg then
+            local lod, lodMsg, res = lodFlg(hSrv:JSONEncode(cfg))
+            if lod then
+                Fluent:Notify({
+                    Title = "Auto Load",
+                    Content = autNam .. " loaded",
+                    Duration = 4
+                })
+            end
+        end
+    end
+
+    task.spawn(function()
+        task.wait(2)
+        lodLib()
+    end)
+
+    Fluent:Notify({
+        Title = "&R4 Flags",
+        Content = "Is TS tuff",
+        Duration = 2
+    })
+
+    SavMan:LoadAutoloadConfig()
+end
+
+local function main()
+    if getgenv().R4FlagsLoaded then return end
+    getgenv().R4FlagsLoaded = true
+    
+    fun.loadFlagsScript()
+end
+
+main()

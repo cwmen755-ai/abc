@@ -1,0 +1,32 @@
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+
+while true do
+    local character = player.Character or player.CharacterAdded:Wait()
+    local rootPart = character:WaitForChild("HumanoidRootPart")
+    
+    local active = true
+    local characterRemovingConn = player.CharacterRemoving:Connect(function()
+        active = false
+        characterRemovingConn:Disconnect()
+    end)
+
+    while active do
+        for _, instance in ipairs(workspace:GetDescendants()) do
+            if instance:IsA("ProximityPrompt") then
+                local prompt = instance
+                local targetPart = prompt.Parent
+                
+                if targetPart and targetPart:IsA("BasePart") and rootPart and rootPart.Parent then
+                    local distance = (targetPart.Position - rootPart.Position).Magnitude
+                    if distance <= prompt.MaxActivationDistance then
+                        prompt:InputHoldBegin()
+                        task.wait(prompt.HoldDuration)
+                        prompt:InputHoldEnd()
+                    end
+                end
+            end
+        end
+        task.wait(0.2)
+    end
+end
